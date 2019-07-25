@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "docsify-cli": "^4.3.0",
+    "global": "^4.4.0"
+  }
+}
