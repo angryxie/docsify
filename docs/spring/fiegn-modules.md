@@ -1,4 +1,4 @@
-# 前文提要：
+# 前文提要
 上一篇我们简单演示了Feign在SpringCloud和非SpringCloud下的使用。但是眼尖的朋友可能会发现了两种使用方式有一些不一样。SpringCloud下使用明显要简单的多，这其中的差距体现在下面这段代码中。
 ```java
 ItemService itemService= Feign.builder()
@@ -9,7 +9,7 @@ ItemService itemService= Feign.builder()
 ```
 在这篇中，我们就来聊一下Feign的基础组件。
 
-# Feign的基础组件构成：
+# Feign的基础组件构成
 根据上面的代码我们可以看到FeignClient的构建使用的是建造者模式，查看FeignBuilder的源码：
 ```java
  private final List<RequestInterceptor> requestInterceptors =
@@ -27,7 +27,7 @@ ItemService itemService= Feign.builder()
         new InvocationHandlerFactory.Default();
     private boolean decode404;
 ```
-这里包含了FeignClient的大部分组件，大部分组件大多数时候我们并不需要自定义，以下组件是我们需要关系的：
+这里包含了FeignClient的大部分组件，大部分组件大多数时候我们并不需要自定义，以下组件是我们需要关心的：
 * Contract
 * Decoder
 * Encoder
@@ -50,13 +50,38 @@ public Contract feignContract(ConversionService feignConversionService) {
     return new SpringMvcContract(this.parameterProcessors, feignConversionService);
 }
 ```
-可以看到SpringCloud默认配置的是SpringMvcContract，这就解释了为什么我们在SpringCloud的项目中可以直接使用SpringMvc的注解了，我想也是Spring的工程师也是因为SpringMvc的注解大家更熟悉才会放弃Feign自有的注解解析器吧。如果要在非Spring项目中的Feign使用SpringMvc的注解，只需要自定义Contract即可，如下：
+查看`SpringMvcContract`对`parseAndValidatateMetadata(Class<?> targetType)`方法的实现，里面的注解判断如下:
+```java
+    for (Annotation methodAnnotation : method.getAnnotations()) {
+        processAnnotationOnMethod(data, methodAnnotation, method);
+      }
+    checkState(data.template().method() != null,
+                "Method %s not annotated with HTTP method type (ex. GET, POST)",
+                method.getName());
+```
+进入`processAnnotationOnMethod`方法查看，可以看到方法的一开始就判断了注解是否是`@RequestMapping`,如果不是则直接返回，这样在上一步的`checkState`会因为找不到`method`而抛出一个`IllegalStateException`异常。
+```java
+    if (!RequestMapping.class.isInstance(methodAnnotation) && !methodAnnotation
+                .annotationType().isAnnotationPresent(RequestMapping.class)) {
+            return;
+        }
+
+    RequestMapping methodMapping = findMergedAnnotation(method, RequestMapping.class);
+    // HTTP Method
+    RequestMethod[] methods = methodMapping.method();
+    if (methods.length == 0) {
+        methods = new RequestMethod[] { RequestMethod.GET };
+    }
+    checkOne(method, methods, "method");
+    data.template().method(methods[0].name());
+```
+后面`SpringMvcContract`依次对参数注解，方法url进行了解析，同样基于`SpringMvc`的注解。这就解释了为什么我们在SpringCloud的项目中可以直接使用`SpringMvc`的注解了，我想`Spring`的工程师也是因为`SpringMvc`的注解大家更熟悉才会放弃`Feign`自有的注解解析器吧。如果要在非`Spring`项目中的`Feign`使用`SpringMvc`的注解，只需要自定义`Contract`即可，如下：
 ```java
 Feign.builder().contract(new SpringMvcContract())
 ```
 
 ## Encoder和Decoder
-这两个组件很容易理解，编码器和解码器。如果你有了解过Netty的话，应该会对这两个组件很熟悉。其中Encode和Decode接口都只有一个方法：
+这两个组件很容易理解，编码器和解码器。如果你有了解过`Netty`的话，应该会对这两个组件很熟悉。其中`Encode`和`Decode`接口都只有一个方法：
 ```java
 void encode(Object object, Type bodyType, RequestTemplate template) throws EncodeException;
 ```
@@ -94,9 +119,9 @@ for (HttpMessageConverter<?> messageConverter : this.messageConverters
     }
 ```
 很容易理解，循环解码器内所有的消息转换器，如果改转换器支持此类消息，则进行转换。
-`messageConverter.canWrite(requestType, requestContentType)`，关于这里，以后有机会可以再详细聊，比如Feign默认支持的格式是json的，但是如果我们要对接老旧项目的话可能需要支持form-data的格式等。
+`messageConverter.canWrite(requestType, requestContentType)`，关于这里，以后有机会可以再详细聊，比如`Feign`默认支持的格式是`Json`的，但是如果我们要对接老旧项目的话可能需要支持`form-data`的格式等。
 
-所以我们可以选择根据需要选择合适的messageConverter，默认Feign对于json格式的转换器是Jackson，对于很多的json解析工具，有它自己默认的实现，比如，我们可以使用Fastjson消息转换器来覆盖掉默认的配置，代码如下：
+所以我们可以选择根据需要选择合适的`MessageConverter`，默认`Feign`对于`Json`格式的转换器是`JacksonHttpMessageConverter `，对于很多的`Json`解析工具，有它自己默认的实现，比如，我们可以使用`FastJsonHttpMessageConverter`来覆盖掉默认的配置，代码如下：
 
 ```java
 @Bean

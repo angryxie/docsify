@@ -1,10 +1,10 @@
-# 简介：
+# 简介
 最近接手了公司的一个旧项目，框架使用的是传统的SSM架构。正值公司推行SpringCloud微服务之际，所以研究了下Feign，着手在传统的Spring项目中接入Feign。
 
-# 介绍：
+# 介绍
 > Feign是一个受到[Retrofit](https://github.com/square/retrofit)，[JAXRS-2.0](https://github.com/jax-rs)和[WebSocket](http://www.oracle.com/technetwork/articles/java/jsr356-1937161.html)的启发而诞生的HTTP请求框架，旨在降低JAVA使用HTTP请求的复杂性，开源地址[OpenFeign](https://github.com/OpenFeign/feign)。
 
-# Feign的基础使用：
+# Feign的基础使用
 * ## SpringBoot中使用
 如果你的项目是SpringBoot项目的话，那么接入Feign会变的非常简单切优雅，如下：
 
